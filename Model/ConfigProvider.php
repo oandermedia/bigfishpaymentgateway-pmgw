@@ -14,6 +14,7 @@ namespace Bigfishpaymentgateway\Pmgw\Model;
 
 use Magento\Checkout\Model\ConfigProviderInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Store\Model\StoreManagerInterface;
 
 class ConfigProvider implements ConfigProviderInterface
 {
@@ -47,13 +48,21 @@ class ConfigProvider implements ConfigProviderInterface
      * @var ScopeConfigInterface
      */
     protected $scopeConfig;
+    /**
+     * @var StoreManagerInterface
+     */
+    private $storeManager;
 
     /**
      * @param ScopeConfigInterface $scopeConfig
+     * @param StoreManagerInterface $storeManager
      */
-    public function __construct(ScopeConfigInterface $scopeConfig)
+    public function __construct(
+        ScopeConfigInterface $scopeConfig,
+        StoreManagerInterface $storeManager)
     {
         $this->scopeConfig = $scopeConfig;
+        $this->storeManager = $storeManager;
     }
 
     /**
@@ -61,7 +70,7 @@ class ConfigProvider implements ConfigProviderInterface
      */
     public function getConfig()
     {
-        $providers = $this->getProviders($this->scopeConfig->getValue('payment'));
+        $providers = $this->getProviders($this->scopeConfig->getValue('payment', \Magento\Store\Model\ScopeInterface::SCOPE_STORE, $this->storeManager->getStore()->getId()));
 
         $this->unifyProviderConfig($providers);
 
