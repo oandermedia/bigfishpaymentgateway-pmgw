@@ -104,7 +104,7 @@ class ConfigProvider implements ConfigProviderInterface
      */
     protected function getCommonConfig()
     {
-        $scopeConfig = $this->scopeConfig->getValue('payment');
+        $scopeConfig = $this->scopeConfig->getValue('payment', \Magento\Store\Model\ScopeInterface::SCOPE_STORE, $this->storeManager->getStore()->getId());
         return (array)$scopeConfig[self::CODE];
     }
 
