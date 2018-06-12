@@ -11,7 +11,6 @@
  * @copyright  Copyright (c) 2017, BIG FISH Ltd.
  */
 namespace Bigfishpaymentgateway\Pmgw\Gateway\Request;
-
 use Bigfishpaymentgateway\Pmgw\Model\ConfigProvider;
 use Bigfishpaymentgateway\Pmgw\Gateway\Helper\Helper;
 use BigFish\PaymentGateway;
@@ -27,44 +26,41 @@ use Magento\Store\Model\StoreManagerInterface;
 use Magento\Framework\App\ProductMetadataInterface;
 use Magento\Framework\Stdlib\DateTime\DateTime;
 use Psr\Log\LoggerInterface;
-
+use Magento\Framework\App\Config\ScopeConfigInterface;
 class InitializeRequest implements BuilderInterface
 {
     /**
      * @var ConfigProvider
      */
     private $providerConfig;
-
     /**
      * @var StoreManagerInterface
      */
     private $storeManager;
-
     /**
      * @var ProductMetadataInterface
      */
     private $productMetaData;
-
     /**
      * @var ModuleListInterface
      */
     private $moduleList;
-
     /**
      * @var Helper
      */
     private $helper;
-
     /**
      * @var LoggerInterface
      */
     private $logger;
-
     /**
      * @var DateTime
      */
     private $dateTime;
-
+        /**
+         * @var ScopeConfigInterface
+         */
+    private $scopeConfig;
     /**
      * @param ConfigProvider $providerConfig
      * @param StoreManagerInterface $storeManager
@@ -73,6 +69,7 @@ class InitializeRequest implements BuilderInterface
      * @param Helper $helper
      * @param LoggerInterface $logger
      * @param DateTime $dateTime
+         * @param ScopeConfigInterface $scopeConfig
      */
     public function __construct(
         ConfigProvider $providerConfig,
@@ -81,7 +78,8 @@ class InitializeRequest implements BuilderInterface
         ModuleListInterface $moduleList,
         Helper $helper,
         LoggerInterface $logger,
-        DateTime $dateTime
+        DateTime $dateTime,
+                ScopeConfigInterface $scopeConfig
     ) {
         $this->providerConfig = $providerConfig;
         $this->storeManager = $storeManager;
@@ -90,8 +88,8 @@ class InitializeRequest implements BuilderInterface
         $this->helper = $helper;
         $this->logger = $logger;
         $this->dateTime = $dateTime;
+                $this->scopeConfig = $scopeConfig;
     }
-
     /**
      * @param array $buildSubject
      * @return array
@@ -105,37 +103,28 @@ class InitializeRequest implements BuilderInterface
         ) {
             throw new \InvalidArgumentException('Payment data object should be provided');
         }
-
         /** @var PaymentDataObjectInterface $payment */
         $payment = $buildSubject['payment'];
-
         /** @var OrderAdapterInterface $order */
         $order = $payment->getOrder();
-
         $providerConfig = $this->getProviderConfig($payment);
-
         if (empty($providerConfig)) {
             throw new \UnexpectedValueException('Payment parameter array should be provided');
         }
-
         $this->helper->setPaymentGatewayConfig(
             $this->getPaymentGatewayConfig($providerConfig)
         );
-
         $response = $this->helper->initializePaymentGatewayTransaction(
             $this->getPaymentGatewayInitRequest($order, $providerConfig)
         );
-
         if ($response->ResultCode === PaymentGateway::RESULT_CODE_SUCCESS) {
             $transaction = $this->helper->createTransaction();
-
             $transaction
                 ->setOrderId($order->getOrderIncrementId())
                 ->setTransactionId($response->TransactionId)
                 ->setCreatedTime($this->dateTime->date())
                 ->setStatus(Helper::TRANSACTION_STATUS_INITIALIZED)
                 ->save();
-
             $this->helper->addTransactionLog($transaction, $response);
         } else {
             $message = $response->ResultCode . ': ' . $response->ResultMessage;
@@ -144,7 +133,6 @@ class InitializeRequest implements BuilderInterface
         }
         return (array)$response;
     }
-
     /**
      * @param PaymentDataObjectInterface $payment
      * @return array
@@ -153,10 +141,8 @@ class InitializeRequest implements BuilderInterface
     protected function getProviderConfig(PaymentDataObjectInterface $payment)
     {
         $methodCode = $payment->getPayment()->getMethodInstance()->getCode();
-
         return $this->providerConfig->getProviderConfig($methodCode);
     }
-
     /**
      * @param array $providerConfig
      * @return Config
@@ -164,14 +150,11 @@ class InitializeRequest implements BuilderInterface
     protected function getPaymentGatewayConfig(array $providerConfig)
     {
         $config = new Config();
-
         $config->storeName = $providerConfig['storename'];
         $config->apiKey = $providerConfig['apikey'];
         $config->testMode = ((int)$providerConfig['testmode'] === 1);
-
         return $config;
     }
-
     /**
      * @param OrderAdapterInterface $order
      * @param $providerConfig
@@ -181,7 +164,6 @@ class InitializeRequest implements BuilderInterface
     protected function getPaymentGatewayInitRequest(OrderAdapterInterface $order, array $providerConfig)
     {
         $request = new InitRequest();
-
         $request
             ->setProviderName($providerConfig['provider_code'])
             ->setResponseUrl($this->getStoreBaseUrl() . $providerConfig['response_url'])
@@ -193,46 +175,36 @@ class InitializeRequest implements BuilderInterface
             ->setModuleName('Magento (' . $this->productMetaData->getVersion() . ')')
             ->setModuleVersion($this->moduleList->getOne(Helper::MODULE_NAME)['setup_version'])
             ->setAutoCommit(true);
-
         $extraData = [];
-
         if ($providerConfig['name'] == ConfigProvider::CODE_KHB_SZEP) {
             $extraData['KhbCardPocketId'] = $providerConfig['card_pocket_id'];
         }
-
         if ($providerConfig['name'] == ConfigProvider::CODE_MKB_SZEP) {
             $request
                 ->setMkbSzepCafeteriaId($providerConfig['card_pocket_id'])
                 ->setGatewayPaymentPage(true);
         }
-
         if ($providerConfig['name'] == ConfigProvider::CODE_OTP_SZEP) {
             $request->setOtpCardPocketId($providerConfig['card_pocket_id']);
         }
-
         if ($providerConfig['name'] == ConfigProvider::CODE_SAFERPAY) {
             if (isset($providerConfig['payment_methods']) && strlen($providerConfig['payment_methods'])) {
                 $extraData['SaferpayPaymentMethods'] = explode(',', $providerConfig['payment_methods']);
             }
-
             if (isset($providerConfig['wallets']) && strlen($providerConfig['wallets'])) {
                 $extraData['SaferpayWallets'] = explode(',', $providerConfig['wallets']);
             }
         }
-
         if ($providerConfig['name'] == ConfigProvider::CODE_WIRECARD) {
             if (isset($providerConfig['payment_type']) && strlen($providerConfig['payment_type'])) {
                 $extraData['QpayPaymentType'] = $providerConfig['payment_type'];
             }
         }
-
         if (!empty($extraData)) {
             $request->setExtra($extraData);
         }
-
         return $request;
     }
-
     /**
      * @return string
      */
@@ -241,13 +213,11 @@ class InitializeRequest implements BuilderInterface
         return $this->storeManager->getStore()
             ->getBaseUrl(UrlInterface::URL_TYPE_WEB);
     }
-
     /**
      * @return string
      */
     protected function getStoreLanguage()
     {
-        return strtoupper(strstr($this->storeManager->getStore()->getLocaleCode(), '_', true));
+        return strtoupper(strstr($this->scopeConfig->getValue('general/locale/code', \Magento\Store\Model\ScopeInterface::SCOPE_STORE, $this->storeManager->getStore()->getId()), '_', true));
     }
-
 }
