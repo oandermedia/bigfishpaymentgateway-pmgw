@@ -113,7 +113,13 @@ class ResponseProcessor
             }
 
             $this->result->setCode($this->response->ResultCode);
-            $this->result->setMessage($this->response->ResultMessage);
+            try {
+                $this->result->setMessage($this->response->ResultMessage);
+            }
+            catch(\Exception $e)
+            {
+                $this->result->setMessage('');
+            }
         } catch (LocalizedException $e) {
             $this->result->setCode(PaymentGateway::RESULT_CODE_ERROR);
             $this->result->setMessage($e->getMessage());
