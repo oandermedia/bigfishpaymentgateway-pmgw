@@ -83,16 +83,16 @@ class Info extends ConfigurableInfo
      */
     protected function _prepareSpecificInformation($transport = null)
     {
-        parent::_prepareSpecificInformation($transport);
+        $transport = parent::_prepareSpecificInformation($transport);
 
         $order = $this->checkoutSession->getLastRealOrder();
         if (!$order || !$order->getId()) {
-            return;
+            return $transport;
         }
 
         $transactionId = $this->getTransactionId($order);
         if (!$transactionId) {
-            return;
+            return $transport;
         }
 
         $transactionData = $this->getTransactionData($transactionId);
