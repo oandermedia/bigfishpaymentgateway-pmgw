@@ -125,6 +125,8 @@ class Success extends Template
      */
     private function canViewOrder(Order $order)
     {
+        return false;
+
         return $this->httpContext->getValue(CutomerModelContext::CONTEXT_AUTH)
             && $this->isVisible($order);
     }
