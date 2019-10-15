@@ -105,8 +105,15 @@ class Success extends Template
             return;
         }
 
+        $payment = $order->getPayment();
+        $method = $payment->getMethodInstance();
+
         $this->addData([
             'order_id'  => $order->getIncrementId(),
+            'order_updated_at'  => $order->getUpdatedAt(),
+            'order_currency_code'  => $order->getBaseCurrencyCode(),
+            'order_total'  => (float)$order->getGrandTotal(),
+            'method_title'  => $method->getTitle(),
             'can_view_order' => $this->canViewOrder($order),
             'response' => $this->getTransactionData($transactionId),
         ]);
@@ -118,8 +125,6 @@ class Success extends Template
      */
     private function canViewOrder(Order $order)
     {
-        return false;
-
         return $this->httpContext->getValue(CutomerModelContext::CONTEXT_AUTH)
             && $this->isVisible($order);
     }

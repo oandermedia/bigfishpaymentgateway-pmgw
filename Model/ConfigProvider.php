@@ -21,6 +21,7 @@ class ConfigProvider implements ConfigProviderInterface
     const CODE = 'bigfishpaymentgateway_pmgw';
 
     const CODE_BARION2 = 'bigfishpaymentgateway_pmgw_barion2';
+    const CODE_BBARUHITEL = 'bigfishpaymentgateway_pmgw_bbaruhitel';
     const CODE_BORGUN = 'bigfishpaymentgateway_pmgw_borgun';
     const CODE_BORGUN2 = 'bigfishpaymentgateway_pmgw_borgun2';
     const CODE_CIB = 'bigfishpaymentgateway_pmgw_cib';
@@ -42,12 +43,14 @@ class ConfigProvider implements ConfigProviderInterface
     const CODE_SAFERPAY = 'bigfishpaymentgateway_pmgw_saferpay';
     const CODE_SOFORT = 'bigfishpaymentgateway_pmgw_sofort';
     const CODE_UNICREDIT = 'bigfishpaymentgateway_pmgw_unicredit';
+    const CODE_VIRPAY = 'bigfishpaymentgateway_pmgw_virpay';
     const CODE_WIRECARD = 'bigfishpaymentgateway_pmgw_wirecard';
 
     /**
      * @var ScopeConfigInterface
      */
     protected $scopeConfig;
+
     /**
      * @var StoreManagerInterface
      */
@@ -59,8 +62,8 @@ class ConfigProvider implements ConfigProviderInterface
      */
     public function __construct(
         ScopeConfigInterface $scopeConfig,
-        StoreManagerInterface $storeManager)
-    {
+        StoreManagerInterface $storeManager
+    ) {
         $this->scopeConfig = $scopeConfig;
         $this->storeManager = $storeManager;
     }
@@ -70,7 +73,11 @@ class ConfigProvider implements ConfigProviderInterface
      */
     public function getConfig()
     {
-        $providers = $this->getProviders($this->scopeConfig->getValue('payment', \Magento\Store\Model\ScopeInterface::SCOPE_STORE, $this->storeManager->getStore()->getId()));
+        $providers = $this->getProviders($this->scopeConfig->getValue(
+            'payment',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
+            $this->storeManager->getStore()->getId()
+        ));
 
         $this->unifyProviderConfig($providers);
 
@@ -104,7 +111,11 @@ class ConfigProvider implements ConfigProviderInterface
      */
     protected function getCommonConfig()
     {
-        $scopeConfig = $this->scopeConfig->getValue('payment', \Magento\Store\Model\ScopeInterface::SCOPE_STORE, $this->storeManager->getStore()->getId());
+        $scopeConfig = $this->scopeConfig->getValue(
+            'payment',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE,
+            $this->storeManager->getStore()->getId()
+        );
         return (array)$scopeConfig[self::CODE];
     }
 
@@ -343,4 +354,15 @@ class ConfigProvider implements ConfigProviderInterface
         ];
     }
 
+    /**
+     * @return array
+     */
+    public function getCardRegistrationModes()
+    {
+        return [
+            '0' => __('No'),
+            '1' => __('Only card registration'),
+            '2' => __('Card registration and One Click Payment'),
+        ];
+    }
 }
